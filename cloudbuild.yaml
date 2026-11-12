@@ -1,0 +1,61 @@
+# Cloud Build → Artifact Registry → Cloud Run
+# Substitute _PROJECT_ID / _REGION / _SERVICE via triggers or:
+#   gcloud builds submit --config=cloudbuild.yaml \
+#     --substitutions=_REGION=asia-south1,_SERVICE=narayan-storefront,_REPOSITORY=narayan
+#
+# Never put Razorpay / DB secrets in this file. Wire them via Secret Manager
+# on the Cloud Run service (see docs/deploy-cloud-run.md).
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: narayan-storefront
+  _REPOSITORY: narayan
+  _IMAGE: narayan-storefront
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: Build
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
+      - --build-arg
+      - NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID}
+      - --build-arg
+      - NEXT_PUBLIC_SITE_URL=${_NEXT_PUBLIC_SITE_URL}
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: Push
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: Deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --cpu=1
+      - --memory=512Mi
+      - --min-instances=0
+      - --max-instances=10
+      - --set-secrets=DATABASE_URL=narayan-database-url:latest,RAZORPAY_KEY_ID=narayan-razorpay-key-id:latest,RAZORPAY_KEY_SECRET=narayan-razorpay-key-secret:latest,RAZORPAY_WEBHOOK_SECRET=narayan-razorpay-webhook-secret:latest
+      - --set-env-vars=NODE_ENV=production,HOSTNAME=0.0.0.0
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_IMAGE}:latest
