@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export default async function ShopPage({ searchParams }: PageProps) {
   const { sort: sortParam } = await searchParams;
   const sort = parseSortParam(sortParam);
-  const { products, total } = getAllProducts(sort);
+  const { products, total } = await getAllProducts(sort);
 
   return (
     <Container className="py-10 sm:py-14">

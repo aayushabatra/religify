@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { GaBootstrap } from "@/components/analytics/GaBootstrap";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { storeConfig } from "@/config/store";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${cormorant.variable} ${manrope.variable} antialiased`}>
+        <GaBootstrap />
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

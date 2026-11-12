@@ -29,7 +29,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) return { title: "Product not found" };
   return {
     title: product.seoTitle,
@@ -58,11 +58,13 @@ function galleryForProduct(
 
 export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const collection = getCollectionBySlug(product.collectionSlug);
-  const related = getRelatedProducts(product, 4);
+  const [collection, related] = await Promise.all([
+    getCollectionBySlug(product.collectionSlug),
+    getRelatedProducts(product, 4),
+  ]);
   const gallery = galleryForProduct(
     product.images,
     collection?.image,

@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { storeConfig } from "@/config/store";
 import { track } from "@/lib/analytics";
-import { clearCart } from "@/lib/cart/actions";
+import { submitOrderEnquiry } from "@/lib/contact/submitEnquiry";
 
 type OrderEnquiryFormProps = {
   itemCount: number;
@@ -52,6 +52,22 @@ export function OrderEnquiryForm({
     }
 
     startTransition(async () => {
+      const email = String(form.get("email") ?? "").trim();
+      const instructions = String(form.get("instructions") ?? "").trim();
+      const result = await submitOrderEnquiry({
+        name,
+        phone,
+        email: email || undefined,
+        addressLine: address,
+        pinCode: pin,
+        instructions: instructions || undefined,
+      });
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
       track({
         name: "contact_submit",
         payload: {
@@ -59,11 +75,12 @@ export function OrderEnquiryForm({
           item_count: itemCount,
           value_label: subtotalLabel,
           payment_taken: false,
+          enquiry_id: result.id,
+          stored: result.stored,
         },
       });
 
       // Demo only — do not mark paid, do not call Razorpay
-      await clearCart();
       setSubmitted(true);
     });
   }

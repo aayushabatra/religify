@@ -5,6 +5,7 @@ import { Container } from "@/components/ui/Container";
 import {
   CheckoutSummary,
   OrderEnquiryForm,
+  RazorpayCheckoutForm,
   TrackBeginCheckout,
 } from "@/features/checkout";
 import { formatInr } from "@/lib/currency";
@@ -14,7 +15,7 @@ import { getPaymentConfig } from "@/lib/payments";
 export const metadata: Metadata = {
   title: "Checkout",
   description:
-    "Demo order enquiry for NARAYAN. No live payment is processed in this phase.",
+    "Checkout for NARAYAN. Live Razorpay when configured; otherwise a labelled demo enquiry.",
 };
 
 export default async function CheckoutPage() {
@@ -40,6 +41,13 @@ export default async function CheckoutPage() {
     );
   }
 
+  const modeLabel =
+    payment.mode === "razorpay"
+      ? "razorpay live"
+      : payment.mode === "razorpay-pending"
+        ? "keys present · incomplete config"
+        : "demo enquiry";
+
   return (
     <Container className="py-10 sm:py-14">
       <TrackBeginCheckout
@@ -49,20 +57,28 @@ export default async function CheckoutPage() {
       />
 
       <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-burgundy/80">
-        Checkout · {payment.keysPresent ? "keys present · pay not live" : "demo enquiry"}
+        Checkout · {modeLabel}
       </p>
       <h1 className="mt-3 font-display text-4xl text-charcoal sm:text-5xl">
-        {payment.keysPresent ? "Checkout (payments pending)" : "Order enquiry"}
+        {payment.enabled ? "Checkout" : "Order enquiry"}
       </h1>
       <p className="mt-4 max-w-2xl text-sm leading-relaxed text-charcoal/70">
         {payment.note}
       </p>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <OrderEnquiryForm
-          itemCount={cart.itemCount}
-          subtotalLabel={formatInr(cart.subtotalInPaise)}
-        />
+        {payment.enabled && payment.keyIdPublic ? (
+          <RazorpayCheckoutForm
+            keyId={payment.keyIdPublic}
+            itemCount={cart.itemCount}
+            subtotalInPaise={cart.subtotalInPaise}
+          />
+        ) : (
+          <OrderEnquiryForm
+            itemCount={cart.itemCount}
+            subtotalLabel={formatInr(cart.subtotalInPaise)}
+          />
+        )}
         <div className="space-y-4">
           <CheckoutSummary cart={cart} />
           <p className="text-sm">

@@ -21,11 +21,11 @@ export {
  * Hydrate cookie lines with catalogue products and server-validated prices.
  * Drops unknown / inactive products. Never trusts client-supplied prices.
  */
-export function hydrateCart(cookieLines: CartCookieLine[]): Cart {
+export async function hydrateCart(cookieLines: CartCookieLine[]): Promise<Cart> {
   const lines: CartLine[] = [];
 
   for (const line of cookieLines) {
-    const product = getProductById(line.productId);
+    const product = await getProductById(line.productId);
     if (!product || !product.isActive) continue;
 
     const maxQty = Math.min(
@@ -44,7 +44,10 @@ export function hydrateCart(cookieLines: CartCookieLine[]): Cart {
   }
 
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const subtotalInPaise = lines.reduce((sum, line) => sum + line.lineTotalInPaise, 0);
+  const subtotalInPaise = lines.reduce(
+    (sum, line) => sum + line.lineTotalInPaise,
+    0,
+  );
 
   return {
     lines,

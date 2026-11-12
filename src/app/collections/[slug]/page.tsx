@@ -10,7 +10,7 @@ import {
 } from "@/features/shop";
 import {
   getCollectionBySlug,
-  getCollections,
+  SAMPLE_COLLECTIONS,
   getProductsByCollection,
   parseSortParam,
 } from "@/lib/catalog";
@@ -22,12 +22,12 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  return getCollections().map((c) => ({ slug: c.slug }));
+  return SAMPLE_COLLECTIONS.map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const collection = getCollectionBySlug(slug);
+  const collection = await getCollectionBySlug(slug);
   if (!collection) return { title: "Collection not found" };
   return {
     title: collection.name,
@@ -38,11 +38,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function CollectionPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { sort: sortParam } = await searchParams;
-  const collection = getCollectionBySlug(slug);
+  const collection = await getCollectionBySlug(slug);
   if (!collection) notFound();
 
   const sort = parseSortParam(sortParam);
-  const { products, total } = getProductsByCollection(slug, sort);
+  const { products, total } = await getProductsByCollection(slug, sort);
 
   return (
     <Container className="py-10 sm:py-14">
