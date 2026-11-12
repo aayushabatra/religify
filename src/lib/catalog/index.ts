@@ -52,6 +52,24 @@ export function getProductBySlug(slug: string): Product | undefined {
   return activeProducts().find((p) => p.slug === slug);
 }
 
+export function getProductById(id: string): Product | undefined {
+  return activeProducts().find((p) => p.id === id);
+}
+
+export function getRelatedProducts(product: Product, limit = 4): Product[] {
+  const sameCollection = activeProducts().filter(
+    (p) => p.collectionSlug === product.collectionSlug && p.id !== product.id,
+  );
+  if (sameCollection.length >= limit) return sameCollection.slice(0, limit);
+
+  const extras = activeProducts().filter(
+    (p) =>
+      p.id !== product.id &&
+      !sameCollection.some((s) => s.id === p.id),
+  );
+  return [...sameCollection, ...extras].slice(0, limit);
+}
+
 export function getFeaturedKits(limit = 4): Product[] {
   return activeProducts()
     .filter((p) => p.isFeatured && p.collectionSlug === "ritual-kits")

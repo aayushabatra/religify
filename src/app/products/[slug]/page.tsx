@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { SampleBadge } from "@/components/ui/SampleBadge";
-import { formatInr } from "@/lib/currency";
-import { getProductBySlug, SAMPLE_PRODUCTS } from "@/lib/catalog";
 import { storeConfig } from "@/config/store";
+import {
+  AddToCartForm,
+  ProductDetails,
+  ProductGallery,
+  RelatedProducts,
+  TrackViewItem,
+} from "@/features/product";
+import { formatInr } from "@/lib/currency";
+import {
+  getCollectionBySlug,
+  getProductBySlug,
+  getRelatedProducts,
+  SAMPLE_PRODUCTS,
+  type ProductImage,
+} from "@/lib/catalog";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -27,70 +37,112 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/** Phase A stub — full PDP gallery / ATC arrives in Phase B. */
-export default async function ProductStubPage({ params }: PageProps) {
+function galleryForProduct(
+  productImages: ProductImage[],
+  collectionImage?: ProductImage,
+  productName?: string,
+): ProductImage[] {
+  const images = [...productImages];
+  if (
+    collectionImage &&
+    !images.some((img) => img.src === collectionImage.src)
+  ) {
+    images.push({
+      ...collectionImage,
+      alt: `${productName ?? "Product"} — sample context imagery`,
+      isSamplePlaceholder: true,
+    });
+  }
+  return images;
+}
+
+export default async function ProductPage({ params }: PageProps) {
   const { slug } = await params;
   const product = getProductBySlug(slug);
   if (!product) notFound();
 
-  const image = product.images[0];
+  const collection = getCollectionBySlug(product.collectionSlug);
+  const related = getRelatedProducts(product, 4);
+  const gallery = galleryForProduct(
+    product.images,
+    collection?.image,
+    product.name,
+  );
 
   return (
     <Container className="py-10 sm:py-14">
-      <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-burgundy/80">
-        Product · Phase B coming soon
-      </p>
-      <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        <div className="relative aspect-[4/5] overflow-hidden bg-[#ebe4d8]">
-          {image ? (
-            <Image
-              src={image.src}
-              alt={image.alt}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              priority
-              unoptimized={image.src.endsWith(".svg")}
-            />
+      <TrackViewItem product={product} />
+
+      <nav aria-label="Breadcrumb" className="text-xs text-charcoal/55">
+        <ol className="flex flex-wrap items-center gap-2">
+          <li>
+            <Link href="/shop" className="hover:text-burgundy">
+              Shop
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          {collection ? (
+            <>
+              <li>
+                <Link
+                  href={`/collections/${collection.slug}`}
+                  className="hover:text-burgundy"
+                >
+                  {collection.name}
+                </Link>
+              </li>
+              <li aria-hidden="true">/</li>
+            </>
           ) : null}
-          <SampleBadge className="absolute left-3 top-3" />
-        </div>
+          <li className="text-charcoal/80">{product.name}</li>
+        </ol>
+      </nav>
+
+      <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-14">
+        <ProductGallery images={gallery} productName={product.name} />
+
         <div>
-          <h1 className="font-display text-4xl text-charcoal sm:text-5xl">
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-burgundy/80">
+            {collection?.name ?? "Product"}
+            {product.isSampleData ? " · Sample" : ""}
+          </p>
+          <h1 className="mt-3 font-display text-4xl text-charcoal sm:text-5xl">
             {product.name}
           </h1>
           <p className="mt-2 text-sm text-charcoal/65">{product.subtitle}</p>
-          <p className="mt-6 text-lg text-charcoal">
+
+          <p className="mt-6 text-2xl text-charcoal">
             {formatInr(product.priceInPaise)}
             <span className="ml-2 text-xs uppercase tracking-wider text-charcoal/45">
               sample price
             </span>
           </p>
+          {product.compareAtPriceInPaise ? (
+            <p className="mt-1 text-sm text-charcoal/45 line-through">
+              {formatInr(product.compareAtPriceInPaise)}
+            </p>
+          ) : null}
+
           <p className="mt-4 text-sm leading-relaxed text-charcoal/75">
             {product.shortDescription}
           </p>
-          <p className="mt-4 text-xs leading-relaxed text-charcoal/55">
-            {storeConfig.sampleDataNotice} Full product detail, variants, and add
-            to cart ship in the next phase.
+          <p className="mt-2 text-xs text-charcoal/50">
+            Availability: sample stock {product.stockQuantity} · SKU {product.sku}
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button href={`/collections/${product.collectionSlug}`} variant="outline">
-              Back to collection
-            </Button>
-            <Button href="/cart" variant="secondary">
-              Cart (stub)
-            </Button>
+
+          <div className="mt-8">
+            <AddToCartForm product={product} />
           </div>
-          <p className="mt-6 text-sm">
-            <Link
-              href="/shop"
-              className="text-burgundy underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy/30"
-            >
-              Continue shopping
-            </Link>
-          </p>
+
+          <ProductDetails product={product} />
         </div>
       </div>
+
+      <RelatedProducts products={related} />
+
+      <p className="mt-10 text-center text-xs text-charcoal/45">
+        {storeConfig.sampleDataNotice}
+      </p>
     </Container>
   );
 }

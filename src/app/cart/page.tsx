@@ -1,26 +1,53 @@
 import type { Metadata } from "next";
-import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import {
+  CartEmpty,
+  CartLineItem,
+  CartSummaryPanel,
+  TrackViewCart,
+} from "@/features/cart";
+import { getCart } from "@/lib/cart";
 
 export const metadata: Metadata = {
   title: "Cart",
-  description: "Cart arrives in Phase B.",
+  description: "Review your NARAYAN cart. Sample prices validated on the server.",
 };
 
-export default function CartStubPage() {
+export default async function CartPage() {
+  const cart = await getCart();
+
   return (
-    <Container className="py-16 sm:py-20">
+    <Container className="py-10 sm:py-14">
+      <TrackViewCart
+        itemCount={cart.itemCount}
+        subtotalInPaise={cart.subtotalInPaise}
+      />
+
       <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-burgundy/80">
-        Cart · stub
+        Cart
       </p>
-      <h1 className="mt-3 font-display text-4xl text-charcoal">Your cart is empty</h1>
-      <p className="mt-4 max-w-lg text-sm leading-relaxed text-charcoal/70">
-        Cart quantity, persistence, and checkout wire-up are planned for Phase B.
-        Browse sample products in the meantime.
-      </p>
-      <div className="mt-8">
-        <Button href="/shop">Continue shopping</Button>
-      </div>
+
+      {cart.lines.length === 0 ? (
+        <CartEmpty />
+      ) : (
+        <>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h1 className="font-display text-4xl text-charcoal">Your cart</h1>
+            <p className="text-sm text-charcoal/55">
+              {cart.itemCount} {cart.itemCount === 1 ? "item" : "items"}
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div>
+              {cart.lines.map((line) => (
+                <CartLineItem key={line.productId} line={line} />
+              ))}
+            </div>
+            <CartSummaryPanel cart={cart} />
+          </div>
+        </>
+      )}
     </Container>
   );
 }
