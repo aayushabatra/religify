@@ -1,6 +1,7 @@
 /**
- * Thin analytics stub for Phase A.
- * Later: forward to GA4 and optionally persist to analytics_events.
+ * Thin analytics helper.
+ * Client: GA4/dataLayer when configured + POST to /api/analytics/track for DB mirror.
+ * Server: optional persist via persistAnalyticsEvent (callers should await that).
  * Never emit fake purchase events from the client alone.
  */
 
@@ -13,6 +14,7 @@ export type AnalyticsEventName =
   | "remove_from_cart"
   | "view_cart"
   | "begin_checkout"
+  | "purchase"
   | "contact_submit"
   | "whatsapp_click";
 
@@ -28,7 +30,6 @@ export type TrackArgs = {
 
 export function track({ name, payload = {} }: TrackArgs): void {
   if (typeof window === "undefined") {
-    // Server-safe no-op with structured log for local debugging
     if (process.env.NODE_ENV === "development") {
       console.info("[analytics:server]", name, payload);
     }
@@ -37,7 +38,6 @@ export function track({ name, payload = {} }: TrackArgs): void {
 
   const detail = { name, payload, ts: Date.now() };
 
-  // Dev console for verification; replace with gtag/dataLayer when GA4 is configured
   if (process.env.NODE_ENV === "development") {
     console.info("[analytics]", detail);
   }
@@ -49,6 +49,12 @@ export function track({ name, payload = {} }: TrackArgs): void {
     gtag?: (...args: unknown[]) => void;
   };
 
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  if (!measurementId && process.env.NODE_ENV === "development") {
+    // GA4 stub when measurement id absent
+    console.info("[analytics:ga4-stub]", name, payload);
+  }
+
   if (Array.isArray(w.dataLayer)) {
     w.dataLayer.push({ event: name, ...payload });
   }
@@ -56,4 +62,18 @@ export function track({ name, payload = {} }: TrackArgs): void {
   if (typeof w.gtag === "function") {
     w.gtag("event", name, payload);
   }
+
+  // Fire-and-forget DB mirror (no await — never block UI)
+  void fetch("/api/analytics/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      payload,
+      path: window.location.pathname,
+    }),
+    keepalive: true,
+  }).catch(() => {
+    /* ignore network errors for analytics */
+  });
 }

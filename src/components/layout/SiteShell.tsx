@@ -6,8 +6,10 @@ import { Footer } from "./Footer";
 import { Header } from "./Header";
 
 export async function SiteShell({ children }: { children: ReactNode }) {
-  const collections = getCollections();
-  const { itemCount } = await getCartSummary();
+  const [collections, { itemCount }] = await Promise.all([
+    getCollections(),
+    getCartSummary(),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-ivory text-charcoal">

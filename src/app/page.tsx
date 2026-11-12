@@ -14,10 +14,12 @@ import {
 } from "@/lib/catalog";
 import { storeConfig } from "@/config/store";
 
-export default function HomePage() {
-  const collections = getCollections();
-  const featuredKits = getFeaturedKits(4);
-  const essentials = getEssentials(6);
+export default async function HomePage() {
+  const [collections, featuredKits, essentials] = await Promise.all([
+    getCollections(),
+    getFeaturedKits(4),
+    getEssentials(6),
+  ]);
 
   return (
     <>

@@ -12,8 +12,8 @@ const policyLinks = [
   { href: "/faq", label: "FAQs" },
 ];
 
-export function Footer() {
-  const collections = getCollections();
+export async function Footer() {
+  const collections = await getCollections();
 
   return (
     <footer className="mt-auto border-t border-gold/30 bg-forest text-ivory">

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export default async function SearchPage({ searchParams }: PageProps) {
   const { q = "", sort: sortParam } = await searchParams;
   const sort = parseSortParam(sortParam);
-  const { products, total, query } = searchProducts(q, sort);
+  const { products, total, query } = await searchProducts(q, sort);
   const title = query ? `Results for “${query}”` : "Search";
 
   return (

@@ -2,12 +2,12 @@
 
 Premium D2C storefront for a Hisar, Haryana family pooja business (working brand name).
 
-Phase A delivers foundation layout, home, collection PLPs, and search PLP with clearly labelled sample catalogue data.
-
 ## Stack
 
 - Next.js App Router + TypeScript + Tailwind CSS
-- Lean dependencies; sample catalogue in `src/lib/catalog`
+- Drizzle ORM + Postgres (optional `DATABASE_URL`)
+- Razorpay (optional keys + webhook secret)
+- Sample catalogue file fallback when DB is unset
 
 ## Run locally
 
@@ -16,7 +16,24 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Works without Cloud SQL or Razorpay — catalogue falls back to labelled sample seed data; checkout stays a demo enquiry.
+
+## Optional integrations
+
+```bash
+# Apply schema (requires DATABASE_URL)
+npm run db:push
+npm run db:seed
+
+# Env names only — see .env.example
+# DATABASE_URL=
+# RAZORPAY_KEY_ID=
+# RAZORPAY_KEY_SECRET=
+# RAZORPAY_WEBHOOK_SECRET=
+# NEXT_PUBLIC_GA_MEASUREMENT_ID=
+```
+
+Live Razorpay checkout requires keys **and** webhook secret **and** `DATABASE_URL`. Orders are marked paid only after a verified webhook — never from the browser alone.
 
 ## Scripts
 
@@ -27,26 +44,20 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Production build |
 | `npm start` | Serve production build |
+| `npm run db:push` | Push Drizzle schema |
+| `npm run db:seed` | Seed sample catalogue into Postgres |
 
 ## Architecture
 
-- `src/app/` — thin routes
-- `src/features/home|shop|product|cart|checkout` — journey UI
-- `src/components/layout|ui` — shell + primitives
-- `src/lib/catalog|cart|analytics|payments` — services
+- `src/app/` — thin routes + API (`/api/checkout`, `/api/payments/razorpay/webhook`, `/api/analytics/track`)
+- `src/features/home|shop|product|cart|checkout`
+- `src/lib/catalog|cart|analytics|payments|contact`
+- `src/db/` — Drizzle schema, client, seed
 - `src/config/store.ts` — Hisar placeholders
-- `src/db/` — reserved for Cloud SQL schema later
 
-## Sample data
+## Phases
 
-All products, prices, and imagery are **sample development data**, not production truth. Replace via `src/lib/catalog/seed.ts` and `public/images/` when real catalogue and photography arrive.
-
-## What’s next
-
-- Phase B: full PDP, cart persistence, demo checkout
-- Phase C: Cloud SQL, Razorpay, webhooks, analytics persistence
-
-## Notes
-
-- Do not invent nationwide shipping or legal claims
-- Secrets belong in environment variables (see `.env.example`)
+- **A** Home + PLPs
+- **B** PDP + cart + demo checkout
+- **C** Postgres + Razorpay webhooks + analytics persistence (this work)
+- **D** Soft launch with real catalogue / GA4 / GCP prod

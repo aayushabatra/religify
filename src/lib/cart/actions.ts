@@ -21,7 +21,7 @@ export async function addToCart(
   productId: string,
   quantity = 1,
 ): Promise<CartMutationResult> {
-  const product = getProductById(productId);
+  const product = await getProductById(productId);
   if (!product || !product.isActive) {
     return { ok: false, error: "That product is not available." };
   }
@@ -40,7 +40,7 @@ export async function addToCart(
     next.push({ productId, quantity: qty });
   }
 
-  const cart = hydrateCart(next);
+  const cart = await hydrateCart(next);
   await writeCartCookieLines(cartLinesForCookie(cart));
   revalidateCommerce();
   return { ok: true, cart };
@@ -50,7 +50,7 @@ export async function updateCartQuantity(
   productId: string,
   quantity: number,
 ): Promise<CartMutationResult> {
-  const product = getProductById(productId);
+  const product = await getProductById(productId);
   if (!product || !product.isActive) {
     return { ok: false, error: "That product is not available." };
   }
@@ -70,7 +70,7 @@ export async function updateCartQuantity(
     }
   }
 
-  const cart = hydrateCart(next);
+  const cart = await hydrateCart(next);
   await writeCartCookieLines(cartLinesForCookie(cart));
   revalidateCommerce();
   return { ok: true, cart };
@@ -81,7 +81,7 @@ export async function removeFromCart(
 ): Promise<CartMutationResult> {
   const existing = await readCartCookieLines();
   const next = existing.filter((line) => line.productId !== productId);
-  const cart = hydrateCart(next);
+  const cart = await hydrateCart(next);
   await writeCartCookieLines(cartLinesForCookie(cart));
   revalidateCommerce();
   return { ok: true, cart };

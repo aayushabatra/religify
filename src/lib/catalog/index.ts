@@ -1,4 +1,8 @@
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { collections as collectionsTable, products as productsTable } from "@/db/schema";
 import { SAMPLE_COLLECTIONS, SAMPLE_PRODUCTS } from "./seed";
+import { mapDbCollection, mapDbProduct } from "./mappers";
 import type {
   CatalogListResult,
   Collection,
@@ -18,10 +22,6 @@ export type {
 
 export { SAMPLE_COLLECTIONS, SAMPLE_PRODUCTS } from "./seed";
 
-function activeProducts(): Product[] {
-  return SAMPLE_PRODUCTS.filter((p) => p.isActive);
-}
-
 function sortProducts(products: Product[], sort: SortOption): Product[] {
   const next = [...products];
   switch (sort) {
@@ -40,73 +40,126 @@ function sortProducts(products: Product[], sort: SortOption): Product[] {
   }
 }
 
-export function getCollections(): Collection[] {
-  return SAMPLE_COLLECTIONS;
+function seedActiveProducts(): Product[] {
+  return SAMPLE_PRODUCTS.filter((p) => p.isActive);
 }
 
-export function getCollectionBySlug(slug: string): Collection | undefined {
-  return SAMPLE_COLLECTIONS.find((c) => c.slug === slug);
+async function loadCollections(): Promise<Collection[]> {
+  const db = getDb();
+  if (!db) return SAMPLE_COLLECTIONS;
+
+  try {
+    const rows = await db.select().from(collectionsTable);
+    if (rows.length === 0) return SAMPLE_COLLECTIONS;
+    return rows.map(mapDbCollection);
+  } catch (error) {
+    console.warn("[catalog] DB collections failed; using seed fallback", error);
+    return SAMPLE_COLLECTIONS;
+  }
 }
 
-export function getProductBySlug(slug: string): Product | undefined {
-  return activeProducts().find((p) => p.slug === slug);
+async function loadActiveProducts(): Promise<Product[]> {
+  const db = getDb();
+  if (!db) return seedActiveProducts();
+
+  try {
+    const rows = await db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.isActive, true));
+    if (rows.length === 0) return seedActiveProducts();
+    return rows.map(mapDbProduct);
+  } catch (error) {
+    console.warn("[catalog] DB products failed; using seed fallback", error);
+    return seedActiveProducts();
+  }
 }
 
-export function getProductById(id: string): Product | undefined {
-  return activeProducts().find((p) => p.id === id);
+export async function getCollections(): Promise<Collection[]> {
+  return loadCollections();
 }
 
-export function getRelatedProducts(product: Product, limit = 4): Product[] {
-  const sameCollection = activeProducts().filter(
+export async function getCollectionBySlug(
+  slug: string,
+): Promise<Collection | undefined> {
+  const all = await loadCollections();
+  return all.find((c) => c.slug === slug);
+}
+
+export async function getProductBySlug(
+  slug: string,
+): Promise<Product | undefined> {
+  const products = await loadActiveProducts();
+  return products.find((p) => p.slug === slug);
+}
+
+export async function getProductById(
+  id: string,
+): Promise<Product | undefined> {
+  const products = await loadActiveProducts();
+  return products.find((p) => p.id === id);
+}
+
+export async function getRelatedProducts(
+  product: Product,
+  limit = 4,
+): Promise<Product[]> {
+  const active = await loadActiveProducts();
+  const sameCollection = active.filter(
     (p) => p.collectionSlug === product.collectionSlug && p.id !== product.id,
   );
   if (sameCollection.length >= limit) return sameCollection.slice(0, limit);
 
-  const extras = activeProducts().filter(
+  const extras = active.filter(
     (p) =>
-      p.id !== product.id &&
-      !sameCollection.some((s) => s.id === p.id),
+      p.id !== product.id && !sameCollection.some((s) => s.id === p.id),
   );
   return [...sameCollection, ...extras].slice(0, limit);
 }
 
-export function getFeaturedKits(limit = 4): Product[] {
-  return activeProducts()
+export async function getFeaturedKits(limit = 4): Promise<Product[]> {
+  const active = await loadActiveProducts();
+  return active
     .filter((p) => p.isFeatured && p.collectionSlug === "ritual-kits")
     .slice(0, limit);
 }
 
-export function getEssentials(limit = 6): Product[] {
-  return activeProducts()
-    .filter((p) => p.isEssential)
-    .slice(0, limit);
+export async function getEssentials(limit = 6): Promise<Product[]> {
+  const active = await loadActiveProducts();
+  return active.filter((p) => p.isEssential).slice(0, limit);
 }
 
-export function getAllProducts(sort: SortOption = "featured"): CatalogListResult {
-  const products = sortProducts(activeProducts(), sort);
+export async function getAllProducts(
+  sort: SortOption = "featured",
+): Promise<CatalogListResult> {
+  const products = sortProducts(await loadActiveProducts(), sort);
   return { products, total: products.length };
 }
 
-export function getProductsByCollection(
+export async function getProductsByCollection(
   slug: CollectionSlug | string,
   sort: SortOption = "featured",
-): CatalogListResult {
-  const collection = getCollectionBySlug(slug);
+): Promise<CatalogListResult> {
+  const [collection, active] = await Promise.all([
+    getCollectionBySlug(slug),
+    loadActiveProducts(),
+  ]);
   const products = sortProducts(
-    activeProducts().filter((p) => p.collectionSlug === slug),
+    active.filter((p) => p.collectionSlug === slug),
     sort,
   );
   return { products, total: products.length, collection };
 }
 
-export function searchProducts(
+export async function searchProducts(
   query: string,
   sort: SortOption = "featured",
-): CatalogListResult {
+): Promise<CatalogListResult> {
   const q = query.trim().toLowerCase();
+  const active = await loadActiveProducts();
   const filtered = !q
-    ? activeProducts()
-    : activeProducts().filter((p) => {
+    ? active
+    : active.filter((p) => {
         const haystack = [
           p.name,
           p.subtitle,

@@ -37,7 +37,7 @@ export type Product = {
   seoTitle: string;
   seoDescription: string;
   /** Marks catalogue row as development sample data */
-  isSampleData: true;
+  isSampleData: boolean;
 };
 
 export type Collection = {
