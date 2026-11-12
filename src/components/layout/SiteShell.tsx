@@ -5,9 +5,9 @@ import { AnnouncementBar } from "./AnnouncementBar";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
 
-export function SiteShell({ children }: { children: ReactNode }) {
+export async function SiteShell({ children }: { children: ReactNode }) {
   const collections = getCollections();
-  const { itemCount } = getCartSummary();
+  const { itemCount } = await getCartSummary();
 
   return (
     <div className="flex min-h-dvh flex-col bg-ivory text-charcoal">
