@@ -61,3 +61,12 @@ Live Razorpay checkout requires keys **and** webhook secret **and** `DATABASE_UR
 - **B** PDP + cart + demo checkout
 - **C** Postgres + Razorpay webhooks + analytics persistence (this work)
 - **D** Soft launch with real catalogue / GA4 / GCP prod
+
+## Deploy (Cloud Run)
+
+Production uses Next.js **standalone** output + `Dockerfile`.
+
+See **[docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)** for Cloud SQL, Secret Manager, `cloudbuild.yaml`, and `scripts/deploy-cloudrun.sh`.
+
+Live GCP deploy requires the owner's `PROJECT_ID` and billing — this repo only ships scaffolding.
+

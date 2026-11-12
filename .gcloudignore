@@ -1,0 +1,14 @@
+.git
+.github
+.next
+node_modules
+.env
+.env.*
+!.env.example
+coverage
+.turbo
+/cursor
+**/*.md
+!docs/deploy-cloud-run.md
+**/*.test.ts
+**/*.test.tsx
